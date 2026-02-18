@@ -1,114 +1,129 @@
-# IAC False Positive Benchmark
+# Datadog IAC False Positive Filtering Benchmark
 
-This benchmark evaluates the accuracy of Datadog's IAC false positive filtering by running the `datadog-iac-scanner` against known security issues and measuring how well the LLM-based filtering correctly identifies true positives vs false positives.
+This repository benchmarks the accuracy of Datadog's **IAC false positive filtering** feature. It measures how well the LLM-based filtering correctly identifies true security issues vs incidental findings that should be filtered out.
 
-## Overview
+> **Note**: This repository is forked from [iacsecurity/tool-compare](https://github.com/iacsecurity/tool-compare), which provides Terraform test cases with known security misconfigurations. We've extended it with tooling to evaluate Datadog's false positive filtering API.
 
-The benchmark:
-1. Scans Terraform test cases with `datadog-iac-scanner`
-2. Sends each finding to the FP evaluation API
-3. Compares API confidence (HIGH/LOW) against expected outcomes
-4. Reports accuracy metrics and compares detection rates across tools
+## Purpose
+
+The benchmark answers two key questions:
+
+1. **Detection Rate**: Does `datadog-iac-scanner` detect security issues as well as or better than other IAC tools?
+2. **FP Filtering Accuracy**: Does the LLM-based filtering correctly distinguish real issues from noise?
+
+### What We Measure
+
+| Metric | Description |
+|--------|-------------|
+| **Detection Rate** | % of test cases where the scanner found at least one finding |
+| **Precision (without filtering)** | % of raw findings that are actual security issues |
+| **Precision (with filtering)** | % of HIGH confidence findings that are actual issues |
+| **Recall** | % of real issues retained after filtering |
+| **FP Filter Rate** | % of incidental findings correctly filtered out |
+
+## How It Works
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  Test Cases     │───▶│ datadog-iac-     │───▶│  SARIF Results  │
+│  (Terraform)    │    │ scanner          │    │                 │
+└─────────────────┘    └──────────────────┘    └────────┬────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│  Accuracy       │◀───│  FP Evaluation   │◀───│  Each Finding   │
+│  Report         │    │  API             │    │                 │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+```
+
+1. **Scan**: Run `datadog-iac-scanner` on 171 Terraform test cases
+2. **Evaluate**: Send each HIGH/MEDIUM finding to the FP evaluation API
+3. **Compare**: Check if API confidence (HIGH/LOW) matches expected outcome
+4. **Report**: Generate accuracy metrics and tool comparisons
+
+## Test Case Structure
+
+Each test case in `test-cases/terraform/` represents a **known security misconfiguration**:
+
+```
+test-cases/terraform/aws/encryption/at-rest/s3_bucket_non_encrypted/
+├── main.tf                 # Terraform code with intentional security issue
+└── results_summary.json    # Ground truth: which tools detect it + expected FPs
+```
 
 ### Evaluation Logic
 
-Each test case represents a **known security issue**. Findings are categorized as:
+| Finding Type | Expected API Response | Correct When |
+|--------------|----------------------|--------------|
+| True Positive (real issue) | HIGH confidence | API returns HIGH |
+| Expected False Positive (noise) | LOW confidence | API returns LOW |
 
-- **True Positives**: Real security issues the model should flag as HIGH confidence
-- **Expected False Positives**: Incidental findings (e.g., missing tags) the model should flag as LOW confidence
+### False Positive Classification
 
-| Finding Type | Expected Confidence | Correct When |
-|--------------|---------------------|--------------|
-| True Positive | HIGH | API returns HIGH |
-| Expected FP | LOW | API returns LOW |
+Each `results_summary.json` defines which findings are **expected false positives** (incidental to the test case):
 
-### False Positive Assignment Logic
-
-Each test case directory contains a `results_summary.json` file that defines which findings should be treated as **expected false positives**. These are findings that are technically valid but incidental to the security issue being tested.
-
-**Expected false positives include:**
-- **Missing tags**: `"'tags' block is missing"`, `"tags is undefined or null"`, `"Missing tags: {\"team\"}"`
-- **Shield/WAF associations**: `"does not have shield advanced associated"`
-- **Informational findings**: Findings about optional best practices unrelated to the test case's core security issue
-
-**NOT expected false positives (real issues):**
-- `publicly_accessible` settings
-- `public_network_access_enabled` settings  
-- Wildcard IAM permissions (`"*"` in actions or resources)
-- The primary security issue the test case was designed to catch
-
-**Example `results_summary.json`:**
 ```json
 {
   "checkov": "yes",
   "kics": "yes",
   "snyk": "no",
   "expected_false_positives": [
-    "Ensure that Azure cloud resource has a team tag",
     "'tags' block is missing",
-    "does not have shield advanced associated"
+    "does not have shield advanced associated",
+    "Missing tags: {\"team\"}"
   ]
 }
 ```
 
-When the benchmark runs, it matches each finding's message against these patterns. If a match is found, the finding is marked as `expected_fp=True`, and the evaluation expects the API to return LOW confidence (indicating the model correctly identified it as a false positive).
+**Classified as Expected FPs:**
+- Missing resource tags
+- Shield/WAF associations
+- Informational best practices unrelated to the core issue
 
-## Prerequisites
+**NOT Expected FPs (real issues):**
+- `publicly_accessible` settings
+- `public_network_access_enabled`
+- Wildcard IAM permissions
+- The primary security issue being tested
+
+---
+
+## Running the Benchmark
+
+### Prerequisites
 
 - Python 3.10+
 - Go 1.21+ (for building the scanner)
 - Datadog API keys with `CodeAnalysisRead` permission
 
-## Running Locally
+### Local Execution
 
-### 1. Build the scanner
+#### 1. Build the scanner
 
 ```bash
-cd /path/to/kics
+cd /path/to/DataDog/kics
 make build
 export SCANNER=$(pwd)/bin/datadog-iac-scanner
 ```
 
-### 2. Run the scanner on test cases
+#### 2. Run the scanner on test cases
 
 ```bash
 cd /path/to/iac-benchmarking/benchmark-tools
 ./run_scanner.sh $SCANNER
 ```
 
-To limit the number of test cases:
+#### 3. Run the evaluation
 
 ```bash
-./run_scanner.sh $SCANNER --limit 10
-```
-
-Or run manually on a specific directory:
-
-```bash
-$SCANNER scan \
-  --path ../test-cases/terraform/aws/encryption \
-  --output-path /tmp \
-  --output-name datadog-iac-result.sarif \
-  --type terraform
-```
-
-> **Note**: The `--type terraform` flag ensures only Terraform files are scanned.
-
-### 3. Run the evaluation
-
-```bash
-# Set API keys (must have CodeAnalysisRead permission)
 export DD_API_KEY='your-api-key'
 export DD_APP_KEY='your-app-key'
 
-# Install dependencies
-pip install requests datadog-api-client
-
-# Run evaluation
+pip install -r requirements.txt
 python fp_eval.py
 ```
 
-### Command-line options
+#### Command-line options
 
 ```bash
 python fp_eval.py --help
@@ -120,81 +135,44 @@ Options:
   --limit N              Limit number of test cases (0 = all)
 ```
 
-### Quick test with limited cases
+### CI Execution
 
-```bash
-python fp_eval.py --limit 10 --workers 3
-```
-
-## Running in CI
-
-The benchmark runs as a GitHub Actions workflow in the [DataDog/kics](https://github.com/DataDog/kics) repository. It clones the [muh-nee/iac-benchmarking](https://github.com/muh-nee/iac-benchmarking) repo for test cases.
-
-### Workflow location
+The benchmark runs weekly via GitHub Actions in [DataDog/kics](https://github.com/DataDog/kics):
 
 ```
 .github/workflows/fp-benchmark.yml
 ```
 
-### Triggering the workflow
+**Schedule**: Every Monday at 4 AM UTC
 
-The workflow is configured as `workflow_dispatch`, meaning it's manually triggered:
+**Manual trigger**: Actions → False Positive Benchmark → Run workflow
 
-1. Go to **Actions** → **False Positive Benchmark**
-2. Click **Run workflow**
-3. Configure inputs:
-   - `test_case_limit`: Limit test cases (0 = all)
-   - `workers`: Concurrent API workers (default: 3)
-
-### Required secrets
-
-The workflow requires these repository secrets:
-
+**Required secrets**:
 | Secret | Description |
 |--------|-------------|
 | `DD_API_KEY` | Datadog API key with `CodeAnalysisRead` permission |
 | `DD_APP_KEY` | Datadog Application key |
 
-### Workflow outputs
+---
 
-- **GitHub Summary**: Accuracy tables and tool comparison
-- **Artifacts**: Full JSON results (`fp-benchmark-results`)
-- **Datadog Metrics**: Submitted to Datadog for dashboarding
+## Understanding Results
 
-### Metrics submitted
-
-| Metric | Description |
-|--------|-------------|
-| `iac.fp_eval.accuracy` | Overall accuracy (%) |
-| `iac.fp_eval.tp_accuracy` | True positive accuracy (%) |
-| `iac.fp_eval.fp_accuracy` | Expected FP accuracy (%) |
-| `iac.fp_eval.total_findings` | Total findings evaluated |
-| `iac.fp_eval.detection_rate.datadog_iac_scanner` | Our detection rate (%) |
-| `iac.fp_eval.detection_rate.{tool}` | Other tools' detection rates |
-| `iac.fp_eval.without_filter.precision` | Precision without FP filtering (%) |
-| `iac.fp_eval.with_filter.precision` | Precision with FP filtering (%) |
-| `iac.fp_eval.with_filter.recall` | Recall with FP filtering (%) |
-| `iac.fp_eval.filter.fps_filtered` | Number of FPs filtered out |
-| `iac.fp_eval.filter.precision_improvement` | Precision improvement from filtering (%) |
-
-## Understanding the results
-
-### Sample output
+### Sample Output
 
 ```
 ============================================================
 EVALUATION SUMMARY
 ============================================================
-Total findings evaluated: 450
+Total findings evaluated: 1116
 Errors: 5
 
 TRUE POSITIVES (expect HIGH):
-  Total: 320, Correct: 295, Accuracy: 92.2%
+  Total: 425, Correct: 383, Accuracy: 90.1%
 
 EXPECTED FALSE POSITIVES (expect LOW):
-  Total: 125, Correct: 110, Accuracy: 88.0%
+  Total: 691, Correct: 566, Accuracy: 81.9%
 
-OVERALL ACCURACY: 90.8%
+OVERALL ACCURACY: 85.0%
 ============================================================
 
 ================================================================================
@@ -202,10 +180,10 @@ DATADOG IAC SCANNER - FP FILTERING COMPARISON
 ================================================================================
 Configuration             Findings   TPs     FPs     Precision    Recall    
 --------------------------------------------------------------------------------
-Without FP Filtering      450        320     130     71.1%        100%      
-With FP Filtering         320        295     25      92.2%        92.2%     
+Without FP Filtering      1116       425     691     38.1%        100%      
+With FP Filtering         508        383     125     75.4%        90.1%     
 --------------------------------------------------------------------------------
-Impact: 105 FPs filtered (80.8%), findings reduced by 28.9%, precision +21.1%
+Impact: 566 FPs filtered (81.9%), findings reduced by 54.5%, precision +37.3%
 ================================================================================
 
 ==========================================================================================
@@ -213,8 +191,8 @@ TOOL COMPARISON
 ==========================================================================================
 Tool                                Detected   Total    Det Rate   Findings   Precision 
 ------------------------------------------------------------------------------------------
-datadog-iac-scanner (no filtering)  145        171      84.8%      450        71.1%     
-datadog-iac-scanner (with filtering)145        171      84.8%      320        92.2%     
+datadog-iac-scanner (no filtering)  161        171      94.2%      1116       38.1%     
+datadog-iac-scanner (with filtering)161        171      94.2%      508        75.4%     
 ------------------------------------------------------------------------------------------
 cloudrail                           123        171      71.9%      -          -         
 kics                                108        171      63.2%      -          -         
@@ -225,119 +203,86 @@ tfsec                               73         171      42.7%      -          -
 ==========================================================================================
 ```
 
-### Result JSON structure
+### Metrics Submitted to Datadog
 
-```json
-{
-  "summary": {
-    "total_findings": 450,
-    "errors": 5,
-    "correct": 405,
-    "accuracy": 0.908,
-    "true_positives": {
-      "total": 320,
-      "correct": 295,
-      "accuracy": 0.922
-    },
-    "expected_false_positives": {
-      "total": 125,
-      "correct": 110,
-      "accuracy": 0.880
-    },
-    "tool_comparison": {
-      "total_test_cases": 171,
-      "datadog_iac_scanner": {
-        "detected": 145,
-        "detection_rate": 0.848
-      },
-      "checkov": { "detected": 120, "total": 171, "detection_rate": 0.702 }
-    },
-    "filtering_comparison": {
-      "without_filtering": {
-        "total_findings": 450,
-        "true_positives": 320,
-        "false_positives": 130,
-        "precision": 0.711
-      },
-      "with_filtering": {
-        "total_findings": 320,
-        "true_positives": 295,
-        "false_positives": 25,
-        "precision": 0.922,
-        "recall": 0.922
-      },
-      "improvement": {
-        "findings_reduced": 130,
-        "findings_reduction_pct": 0.289,
-        "fps_filtered": 105,
-        "fps_filter_rate": 0.808,
-        "precision_improvement": 0.211
-      }
-    }
-  },
-  "results": [
-    {
-      "rule_id": "aws-s3-bucket-encryption",
-      "test_case": "s3_bucket_non_encrypted",
-      "message": "S3 bucket encryption is not enabled",
-      "confidence": "HIGH",
-      "reason": "The S3 bucket lacks encryption...",
-      "is_correct": true,
-      "expected_fp": false
-    }
-  ]
-}
-```
+| Metric | Description |
+|--------|-------------|
+| `iac.fp_eval.accuracy` | Overall accuracy (%) |
+| `iac.fp_eval.tp_accuracy` | True positive accuracy (%) |
+| `iac.fp_eval.fp_accuracy` | Expected FP accuracy (%) |
+| `iac.fp_eval.detection_rate.datadog_iac_scanner` | Detection rate (%) |
+| `iac.fp_eval.without_filter.precision` | Precision without filtering (%) |
+| `iac.fp_eval.with_filter.precision` | Precision with filtering (%) |
+| `iac.fp_eval.filter.precision_improvement` | Precision gain from filtering (%) |
 
-## Updating expected false positives
+---
 
-Some findings are incidental to the test case (e.g., missing tags on resources). These are marked as "expected false positives" in `results_summary.json`:
+## Updating the Benchmark
+
+### Adding New Test Cases
+
+1. Create a new directory under `test-cases/terraform/{cloud}/{category}/{issue_name}/`
+2. Add `main.tf` with intentional security misconfiguration
+3. Add `results_summary.json` with ground truth:
 
 ```json
 {
   "checkov": "yes",
-  "cloudrail": "yes",
+  "cloudrail": "no",
   "kics": "yes",
-  "snyk": "yes",
-  "terrascan": "yes",
+  "snyk": "no",
+  "terrascan": "no",
   "tfsec": "yes",
-  "expected_false_positives": [
-    "Ensure that Azure cloud resource has a team tag",
-    "'tags' block is missing"
-  ]
+  "expected_false_positives": []
 }
 ```
 
-To bulk-update expected FPs based on evaluation results:
+4. Run locally to verify detection
+
+### Updating Expected False Positives
+
+After running an evaluation, review LOW confidence findings. If they are truly incidental:
 
 ```bash
+# Automatically update results_summary.json files based on evaluation
 python update_expected_fps.py
 ```
 
-This reads `fp_eval_results.json` and updates `results_summary.json` files for findings with LOW confidence, excluding actual security issues like:
-- `publicly_accessible` settings
-- `public_network_access_enabled`
-- Wildcard IAM permissions
+This script:
+- Reads `fp_eval_results.json`
+- Finds findings marked LOW confidence
+- Adds them to `expected_false_positives` in each test case
+- Excludes actual security issues (publicly_accessible, wildcards, etc.)
 
-## Files
+### Manual Review
+
+For findings that need human judgment:
+
+1. Run evaluation: `python fp_eval.py`
+2. Review `results/fp_eval_results.json`
+3. For incorrect classifications, update `results_summary.json` manually
+
+---
+
+## Files Reference
 
 | File | Description |
 |------|-------------|
 | `fp_eval.py` | Main evaluation script |
-| `run_scanner.sh` | Helper to run scanner on all test cases |
-| `update_expected_fps.py` | Bulk update expected FPs from results |
+| `run_scanner.sh` | Run scanner on all test cases |
 | `generate_summary.py` | Generate GitHub Actions summary |
-| `check_threshold.py` | Check accuracy meets threshold |
 | `submit_metrics.py` | Submit metrics to Datadog |
+| `check_threshold.py` | Fail CI if accuracy below threshold |
+| `update_expected_fps.py` | Bulk update expected FPs |
 | `requirements.txt` | Python dependencies |
-| `../results/fp_eval_results.json` | Evaluation results output |
-| `../test-cases/terraform/` | Test case directories |
+
+---
 
 ## Troubleshooting
 
 ### "No files were scanned"
 
-Make sure to include the `--type` flag:
+Include the `--type` flag:
 
 ```bash
 $SCANNER scan --path <path> --type terraform --output-path <output> --output-name result.sarif
@@ -345,11 +290,17 @@ $SCANNER scan --path <path> --type terraform --output-path <output> --output-nam
 
 ### 403 Forbidden from API
 
-Your API keys need `CodeAnalysisRead` permission. Check with your team for keys with the correct scope.
+API keys need `CodeAnalysisRead` permission. Verify your keys have the correct scope.
 
-### Rate limiting
+### Staging vs Production
 
-The script has built-in retry logic with backoff. Reduce workers if you hit rate limits:
+Ensure API keys match the endpoint:
+- **Production**: `api.datadoghq.com` (default)
+- **Staging**: `dd.datad0g.com`
+
+### Rate Limiting
+
+Reduce concurrent workers:
 
 ```bash
 python fp_eval.py --workers 1
