@@ -30,6 +30,7 @@ def main():
     tp = summary.get('true_positives', {})
     fp = summary.get('expected_false_positives', {})
     tc = summary.get('tool_comparison', {})
+    fc = summary.get('filtering_comparison', {})
     
     configuration = Configuration()
     configuration.api_key['apiKeyAuth'] = os.environ['DD_API_KEY']
@@ -56,6 +57,23 @@ def main():
     for tool in BENCHMARK_TOOLS:
         tool_data = tc.get(tool, {})
         metrics.append((f'iac.fp_eval.detection_rate.{tool}', tool_data.get('detection_rate', 0) * 100))
+    
+    # Add filtering comparison metrics
+    if fc:
+        wof = fc.get('without_filtering', {})
+        wf = fc.get('with_filtering', {})
+        imp = fc.get('improvement', {})
+        
+        metrics.extend([
+            ('iac.fp_eval.without_filter.total', wof.get('total_findings', 0)),
+            ('iac.fp_eval.without_filter.precision', wof.get('precision', 0) * 100),
+            ('iac.fp_eval.with_filter.total', wf.get('total_findings', 0)),
+            ('iac.fp_eval.with_filter.precision', wf.get('precision', 0) * 100),
+            ('iac.fp_eval.with_filter.recall', wf.get('recall', 0) * 100),
+            ('iac.fp_eval.filter.fps_filtered', imp.get('fps_filtered', 0)),
+            ('iac.fp_eval.filter.reduction_pct', imp.get('findings_reduction_pct', 0) * 100),
+            ('iac.fp_eval.filter.precision_improvement', imp.get('precision_improvement', 0) * 100),
+        ])
     
     with ApiClient(configuration) as api_client:
         api = MetricsApi(api_client)

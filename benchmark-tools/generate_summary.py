@@ -18,6 +18,7 @@ def main():
     tp = summary.get('true_positives', {})
     fp = summary.get('expected_false_positives', {})
     tc = summary.get('tool_comparison', {})
+    fc = summary.get('filtering_comparison', {})
     
     accuracy = summary.get('accuracy', 0)
     status = '✅' if accuracy >= 0.8 else '⚠️'
@@ -32,6 +33,28 @@ def main():
     print('')
     print(f'Errors: {summary.get("errors", 0)}')
     print('')
+    
+    # FP Filtering Comparison
+    if fc:
+        wof = fc.get('without_filtering', {})
+        wf = fc.get('with_filtering', {})
+        imp = fc.get('improvement', {})
+        
+        print('### FP Filtering Impact')
+        print('')
+        print('| Metric | Without Filtering | With Filtering |')
+        print('|--------|-------------------|----------------|')
+        print(f'| Total Findings | {wof.get("total_findings", 0)} | {wf.get("total_findings", 0)} |')
+        print(f'| True Positives | {wof.get("true_positives", 0)} | {wf.get("true_positives", 0)} |')
+        print(f'| False Positives | {wof.get("false_positives", 0)} | {wf.get("false_positives", 0)} |')
+        print(f'| Precision | {wof.get("precision", 0):.1%} | {wf.get("precision", 0):.1%} |')
+        print(f'| Recall | 100% | {wf.get("recall", 0):.1%} |')
+        print('')
+        print(f'**Improvement:** {imp.get("fps_filtered", 0)} FPs filtered ({imp.get("fps_filter_rate", 0):.1%}), '
+              f'findings reduced by {imp.get("findings_reduction_pct", 0):.1%}, '
+              f'precision +{imp.get("precision_improvement", 0):.1%}')
+        print('')
+    
     print('### Tool Comparison - Detection Rates')
     print('')
     print('| Tool | Detected | Total | Rate |')

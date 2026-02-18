@@ -140,6 +140,11 @@ The workflow requires these repository secrets:
 | `iac.fp_eval.total_findings` | Total findings evaluated |
 | `iac.fp_eval.detection_rate.datadog_iac_scanner` | Our detection rate (%) |
 | `iac.fp_eval.detection_rate.{tool}` | Other tools' detection rates |
+| `iac.fp_eval.without_filter.precision` | Precision without FP filtering (%) |
+| `iac.fp_eval.with_filter.precision` | Precision with FP filtering (%) |
+| `iac.fp_eval.with_filter.recall` | Recall with FP filtering (%) |
+| `iac.fp_eval.filter.fps_filtered` | Number of FPs filtered out |
+| `iac.fp_eval.filter.precision_improvement` | Precision improvement from filtering (%) |
 
 ## Understanding the results
 
@@ -159,6 +164,22 @@ EXPECTED FALSE POSITIVES (expect LOW):
   Total: 125, Correct: 110, Accuracy: 88.0%
 
 OVERALL ACCURACY: 90.8%
+============================================================
+
+============================================================
+FP FILTERING COMPARISON
+============================================================
+Metric                         Without Filter   With Filter    
+------------------------------------------------------------
+Total Findings                 450              320            
+True Positives                 320              295            
+False Positives                130              25             
+Precision                      71.1%            92.2%          
+Recall                         100%             92.2%          
+
+FPs Filtered Out: 105 (80.8% of expected FPs)
+Findings Reduced: 130 (28.9%)
+Precision Improvement: +21.1%
 ============================================================
 
 ============================================================
@@ -202,6 +223,28 @@ cloudrail                 72         171        42.1%
         "detection_rate": 0.848
       },
       "checkov": { "detected": 120, "total": 171, "detection_rate": 0.702 }
+    },
+    "filtering_comparison": {
+      "without_filtering": {
+        "total_findings": 450,
+        "true_positives": 320,
+        "false_positives": 130,
+        "precision": 0.711
+      },
+      "with_filtering": {
+        "total_findings": 320,
+        "true_positives": 295,
+        "false_positives": 25,
+        "precision": 0.922,
+        "recall": 0.922
+      },
+      "improvement": {
+        "findings_reduced": 130,
+        "findings_reduction_pct": 0.289,
+        "fps_filtered": 105,
+        "fps_filter_rate": 0.808,
+        "precision_improvement": 0.211
+      }
     }
   },
   "results": [

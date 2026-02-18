@@ -388,6 +388,41 @@ def main():
             "detection_rate": rate,
         }
 
+    # Calculate "without FP filtering" comparison
+    # Without filtering: all findings are reported
+    # With filtering: only HIGH confidence findings are reported (FPs filtered out)
+    all_non_error = [r for r in results_list if r["confidence"] != "ERROR"]
+    high_results = [r for r in all_non_error if r["confidence"] == "HIGH"]
+    low_results = [r for r in all_non_error if r["confidence"] == "LOW"]
+    
+    # True positives (real issues) vs incidental/expected FPs
+    actual_tps = [r for r in all_non_error if not r.get("expected_fp", False)]
+    actual_fps = [r for r in all_non_error if r.get("expected_fp", False)]
+    
+    # Without FP filtering stats
+    without_filtering_total = len(all_non_error)
+    without_filtering_tps = len(actual_tps)
+    without_filtering_fps = len(actual_fps)
+    without_filtering_precision = without_filtering_tps / without_filtering_total if without_filtering_total > 0 else 0
+    
+    # With FP filtering stats (only HIGH confidence reported)
+    # HIGH confidence findings that are actual TPs = true positives reported
+    # HIGH confidence findings that are actual FPs = false positives still reported
+    high_actual_tps = [r for r in high_results if not r.get("expected_fp", False)]
+    high_actual_fps = [r for r in high_results if r.get("expected_fp", False)]
+    
+    with_filtering_total = len(high_results)
+    with_filtering_tps = len(high_actual_tps)
+    with_filtering_fps = len(high_actual_fps)
+    with_filtering_precision = with_filtering_tps / with_filtering_total if with_filtering_total > 0 else 0
+    
+    # Recall: what % of actual TPs are still reported with filtering
+    with_filtering_recall = with_filtering_tps / len(actual_tps) if actual_tps else 0
+    
+    # FPs filtered out (LOW confidence expected FPs)
+    fps_filtered = len([r for r in low_results if r.get("expected_fp", False)])
+    fps_filter_rate = fps_filtered / len(actual_fps) if actual_fps else 0
+
     summary = {
         "total_findings": total,
         "errors": errors,
@@ -411,6 +446,28 @@ def main():
             },
             **tool_comparison_stats,
         },
+        "filtering_comparison": {
+            "without_filtering": {
+                "total_findings": without_filtering_total,
+                "true_positives": without_filtering_tps,
+                "false_positives": without_filtering_fps,
+                "precision": without_filtering_precision,
+            },
+            "with_filtering": {
+                "total_findings": with_filtering_total,
+                "true_positives": with_filtering_tps,
+                "false_positives": with_filtering_fps,
+                "precision": with_filtering_precision,
+                "recall": with_filtering_recall,
+            },
+            "improvement": {
+                "findings_reduced": without_filtering_total - with_filtering_total,
+                "findings_reduction_pct": 1 - (with_filtering_total / without_filtering_total) if without_filtering_total > 0 else 0,
+                "fps_filtered": fps_filtered,
+                "fps_filter_rate": fps_filter_rate,
+                "precision_improvement": with_filtering_precision - without_filtering_precision,
+            },
+        },
     }
 
     # Print summary
@@ -427,6 +484,23 @@ def main():
     print(f"  Total: {fp_total}, Correct: {fp_correct}, Accuracy: {fp_accuracy:.1%}")
     print(f"")
     print(f"OVERALL ACCURACY: {accuracy:.1%}")
+    print(f"{'=' * 60}")
+    
+    # Print FP filtering comparison
+    print(f"\n{'=' * 60}")
+    print("FP FILTERING COMPARISON")
+    print(f"{'=' * 60}")
+    print(f"{'Metric':<30} {'Without Filter':<15} {'With Filter':<15}")
+    print(f"{'-' * 60}")
+    print(f"{'Total Findings':<30} {without_filtering_total:<15} {with_filtering_total:<15}")
+    print(f"{'True Positives':<30} {without_filtering_tps:<15} {with_filtering_tps:<15}")
+    print(f"{'False Positives':<30} {without_filtering_fps:<15} {with_filtering_fps:<15}")
+    print(f"{'Precision':<30} {without_filtering_precision:<15.1%} {with_filtering_precision:<15.1%}")
+    print(f"{'Recall':<30} {'100%':<15} {with_filtering_recall:<15.1%}")
+    print(f"")
+    print(f"FPs Filtered Out: {fps_filtered} ({fps_filter_rate:.1%} of expected FPs)")
+    print(f"Findings Reduced: {without_filtering_total - with_filtering_total} ({1 - (with_filtering_total / without_filtering_total) if without_filtering_total > 0 else 0:.1%})")
+    print(f"Precision Improvement: +{with_filtering_precision - without_filtering_precision:.1%}")
     print(f"{'=' * 60}")
     
     # Print tool comparison
