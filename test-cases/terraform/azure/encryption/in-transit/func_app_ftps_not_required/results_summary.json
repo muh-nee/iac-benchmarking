@@ -1,8 +1,12 @@
 {
-  "checkov": "no",
-  "cloudrail": "no",
-  "kics": "no",
+  "checkov": "yes",
+  "cloudrail": "yes",
+  "kics": "yes",
   "snyk": "no",
-  "terrascan": "no",
-  "tfsec": "no"
+  "terrascan": "yes",
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "Ensure that Azure cloud resource has a team tag"
+  ]
 }

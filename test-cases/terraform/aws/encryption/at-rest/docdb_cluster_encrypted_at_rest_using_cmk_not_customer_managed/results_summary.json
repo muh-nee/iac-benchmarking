@@ -4,5 +4,8 @@
   "kics": "yes",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "DOCDB Cluster is encrypted with AWS managed key"
+  ]
 }

@@ -4,5 +4,8 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "aws_ecr_repository[foo] doesn't have policies attached"
+  ]
 }

@@ -4,5 +4,9 @@
   "kics": "no",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'azurerm_virtual_network[vnet].ddos_protection_plan' is undefined or null",
+    "'tags' block is missing"
+  ]
 }

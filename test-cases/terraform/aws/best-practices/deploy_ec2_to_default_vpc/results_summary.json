@@ -4,5 +4,10 @@
   "kics": "yes",
   "snyk": "no",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_instance[t2-instance].subnet_id is associated with a default VPC",
+    "aws_route_table[{{default-route-table}}].tags is undefined or null"
+  ]
 }

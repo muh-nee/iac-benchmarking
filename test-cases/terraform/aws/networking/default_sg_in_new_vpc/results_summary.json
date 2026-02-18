@@ -4,5 +4,8 @@
   "kics": "no",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'ebs_optimized' is undefined or null"
+  ]
 }

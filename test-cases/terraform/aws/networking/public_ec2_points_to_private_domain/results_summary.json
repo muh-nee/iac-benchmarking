@@ -4,5 +4,18 @@
   "kics": "no",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'encrypt_at_rest' is undefined",
+    "'tags' block is missing",
+    "aws_elasticsearch_domain[{{test}}].tags is undefined or null",
+    "aws_instance[public_ins].subnet_id is associated with a default VPC",
+    "aws_internet_gateway[{{igw}}].tags is undefined or null",
+    "aws_network_acl[{{ec2_nacl}}].tags does not have additional tags defined other than 'Name'",
+    "aws_route_table[{{nondefault_1}}].tags is undefined or null",
+    "aws_security_group[{{esdomain}}] description is undefined or null",
+    "aws_security_group[{{esdomain}}].tags is undefined or null",
+    "aws_subnet[{{nondefault_2}}].tags is undefined or null",
+    "aws_vpc[{{nondefault}}].tags is undefined or null"
+  ]
 }

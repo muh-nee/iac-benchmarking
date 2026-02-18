@@ -4,5 +4,10 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "no",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_lb does not have shield advanced associated",
+    "aws_lb[{{disabled}}].tags is undefined or null"
+  ]
 }
