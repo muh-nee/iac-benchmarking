@@ -4,5 +4,10 @@
   "kics": "yes",
   "snyk": "no",
   "terrascan": "yes",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_ecr_repository[foo] doesn't have policies attached",
+    "aws_ecr_repository[{{foo}}].tags is undefined or null"
+  ]
 }

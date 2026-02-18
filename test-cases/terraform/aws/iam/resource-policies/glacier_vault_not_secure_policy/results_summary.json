@@ -4,5 +4,10 @@
   "kics": "no",
   "snyk": "yes",
   "terrascan": "no",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_glacier_vault[{{not_secure_archive}}].tags is undefined or null",
+    "aws_sns_topic[{{aws_sns_topic}}].tags is undefined or null"
+  ]
 }

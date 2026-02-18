@@ -4,5 +4,15 @@
   "kics": "no",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_route_table[{{subnet2_1}}].tags is undefined or null",
+    "aws_subnet[{{subnet1_1}}].tags is undefined or null",
+    "aws_subnet[{{subnet1_2}}].tags is undefined or null",
+    "aws_subnet[{{subnet2_1}}].tags is undefined or null",
+    "aws_vpc[{{vpc1}}].tags is undefined or null",
+    "aws_vpc_peering_connection[{{this}}].tags is undefined or null",
+    "aws_vpc_peering_connection_accepter[{{peer_accepter}}].tags is undefined or null"
+  ]
 }

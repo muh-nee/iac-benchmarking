@@ -4,5 +4,11 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_eks_cluster[{{test}}].tags is undefined or null",
+    "aws_iam_role[{{eksrole}}].tags is undefined or null",
+    "aws_subnet[{{subnet1}}].tags is undefined or null"
+  ]
 }

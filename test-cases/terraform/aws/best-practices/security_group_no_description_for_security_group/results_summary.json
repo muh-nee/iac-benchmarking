@@ -4,5 +4,10 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "HTTPS (TCP:443) is allowed",
+    "aws_vpc[{{vpc}}].tags is undefined or null"
+  ]
 }

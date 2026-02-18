@@ -4,5 +4,16 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_internet_gateway[{{igw1}}].tags is undefined or null",
+    "aws_lb does not have shield advanced associated",
+    "aws_lb[{{alb_test}}].tags is undefined or null",
+    "aws_lb_target_group[{{test}}].tags is undefined or null",
+    "aws_route_table[{{rt1}}].tags is undefined or null",
+    "aws_subnet[{{subnet1}}].tags does not have additional tags defined other than 'Name'",
+    "aws_subnet[{{subnet2}}].tags does not have additional tags defined other than 'Name'",
+    "aws_vpc[{{vpc1}}].tags is undefined or null"
+  ]
 }

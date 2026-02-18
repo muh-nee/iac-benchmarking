@@ -1,0 +1,178 @@
+name: IAC False Positive Evaluation
+
+on:
+  schedule:
+    # Run weekly on Monday at 6 AM UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      limit_test_cases:
+        description: 'Limit number of test cases (0 = all)'
+        required: false
+        default: '0'
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Checkout iac-benchmarking repo
+      uses: actions/checkout@v4
+      with:
+        path: workspace/iac-benchmarking
+
+    - name: Setup workspace
+      run: |
+        mkdir -p workspace/bin
+        echo "WORKSPACE_DIR=$(pwd)/workspace" >> $GITHUB_ENV
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.22'
+        check-latest: true
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Python dependencies
+      run: |
+        pip install requests datadog-api-client
+
+    - name: Checkout DataDog/kics repo
+      uses: actions/checkout@v4
+      with:
+        repository: DataDog/kics
+        ref: 'main'
+        token: ${{ secrets.KICS_PAT }}
+        path: workspace/kics
+
+    - name: Build datadog-iac-scanner
+      run: |
+        cd $WORKSPACE_DIR/kics
+        make build
+        mv bin/datadog-iac-scanner $WORKSPACE_DIR/bin/
+        # Verify it works
+        $WORKSPACE_DIR/bin/datadog-iac-scanner --help
+
+    - name: Run IAC scanner on test cases
+      run: |
+        cd $WORKSPACE_DIR/iac-benchmarking
+        SCANNER="$WORKSPACE_DIR/bin/datadog-iac-scanner"
+        
+        # Create results directory
+        mkdir -p results
+        
+        # Find all test case directories with main.tf
+        find test-cases/terraform -name "main.tf" -exec dirname {} \; | while read test_case; do
+          echo "Scanning: $test_case"
+          
+          # Create output directory for this test case
+          mkdir -p "$test_case/sarif"
+          
+          # Run scanner (exit codes are non-zero for findings, use || true)
+          $SCANNER scan \
+            --path "$test_case" \
+            --output-path "$test_case/sarif" \
+            --output-name "datadog-iac-result.sarif" \
+            --log-level error || true
+        done
+        
+        echo "Scanning complete"
+
+    - name: Aggregate SARIF results
+      run: |
+        cd $WORKSPACE_DIR/iac-benchmarking
+        
+        # Combine all SARIF files into a single file for processing
+        python3 << 'EOF'
+import json
+from pathlib import Path
+
+all_results = []
+test_case_dirs = []
+
+for sarif_file in Path("test-cases/terraform").rglob("datadog-iac-result.sarif"):
+    test_case_dir = sarif_file.parent.parent
+    test_case_dirs.append(str(test_case_dir))
+    
+    try:
+        sarif = json.loads(sarif_file.read_text())
+        for run in sarif.get("runs", []):
+            for result in run.get("results", []):
+                # Add test case path to result for tracking
+                result["_test_case_dir"] = str(test_case_dir)
+                all_results.append({
+                    "result": result,
+                    "test_case": str(test_case_dir),
+                    "tool": run.get("tool", {}).get("driver", {}).get("name", "unknown")
+                })
+    except Exception as e:
+        print(f"Error processing {sarif_file}: {e}")
+
+print(f"Found {len(all_results)} total findings across {len(set(test_case_dirs))} test cases")
+
+# Save aggregated results
+Path("results/aggregated_findings.json").write_text(json.dumps(all_results, indent=2))
+EOF
+
+    - name: Run FP evaluation
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+      run: |
+        cd $WORKSPACE_DIR/iac-benchmarking/benchmark-tools
+        python iac_fp_eval.py \
+          --test-cases-dir ../test-cases/terraform \
+          --output ../results/fp_eval_results.json \
+          --workers 3 \
+          --use-sarif
+
+    - name: Submit metrics to Datadog
+      if: always()
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+      run: |
+        cd $WORKSPACE_DIR/iac-benchmarking/benchmark-tools
+        if [ -f ../results/fp_eval_results.json ]; then
+          python submit_metrics.py ../results/fp_eval_results.json --dataset terraform
+        fi
+
+    - name: Upload results artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: fp-eval-results
+        path: |
+          workspace/iac-benchmarking/results/
+
+    - name: Generate summary
+      if: always()
+      run: |
+        cd $WORKSPACE_DIR/iac-benchmarking
+        if [ -f results/fp_eval_results.json ]; then
+          echo "## IAC False Positive Evaluation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+import json
+from pathlib import Path
+
+results = json.loads(Path("results/fp_eval_results.json").read_text())
+summary = results.get("summary", {})
+
+print("| Metric | Value |")
+print("|--------|-------|")
+print(f"| Total Findings | {summary.get('total_findings', 0)} |")
+print(f"| HIGH confidence (correct) | {summary.get('high_confidence', 0)} |")
+print(f"| LOW confidence (incorrect) | {summary.get('low_confidence', 0)} |")
+print(f"| Errors | {summary.get('errors', 0)} |")
+print(f"| **Accuracy** | **{summary.get('accuracy', 0):.1%}** |")
+EOF
+        fi

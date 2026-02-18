@@ -4,5 +4,13 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "Attribute 'minimum_compression_size' is undefined",
+    "aws_api_gateway_deployment[api_gw_deploy] doesn't have a 'aws_api_gateway_usage_plan' resource associated.",
+    "aws_api_gateway_rest_api[{{api_gw}}].tags is undefined or null",
+    "aws_api_gateway_stage[api_gw_stage] doesn't have a 'aws_api_gateway_usage_plan' resource associated.",
+    "aws_api_gateway_stage[{{api_gw_stage}}].tags is undefined or null"
+  ]
 }

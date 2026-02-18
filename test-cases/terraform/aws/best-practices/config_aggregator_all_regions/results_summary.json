@@ -4,5 +4,9 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_config_configuration_aggregator[{{organization}}].tags is undefined or null"
+  ]
 }

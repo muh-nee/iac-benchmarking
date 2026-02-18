@@ -4,5 +4,8 @@
   "kics": "yes",
   "snyk": "yes",
   "terrascan": "yes",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "aws_s3_bucket[{{public-bucket}}].tags is undefined or null"
+  ]
 }

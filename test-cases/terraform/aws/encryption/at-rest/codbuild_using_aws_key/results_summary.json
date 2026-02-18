@@ -4,5 +4,10 @@
   "kics": "yes",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "CodeBuild Project is encrypted with AWS managed key",
+    "aws_iam_role[{{codebuild}}].tags is undefined or null"
+  ]
 }

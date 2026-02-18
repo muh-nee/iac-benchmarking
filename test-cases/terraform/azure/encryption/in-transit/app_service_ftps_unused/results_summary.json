@@ -4,5 +4,9 @@
   "kics": "no",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "Ensure that Azure cloud resource has a team tag"
+  ]
 }

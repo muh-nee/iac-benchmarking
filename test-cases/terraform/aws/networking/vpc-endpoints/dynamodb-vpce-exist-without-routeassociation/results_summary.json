@@ -4,5 +4,15 @@
   "kics": "yes",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "no"
+  "tfsec": "no",
+  "expected_false_positives": [
+    "'tags' block is missing",
+    "aws_dynamodb_table[{{basic-dynamodb-table}}].tags is undefined or null",
+    "aws_instance[{{test}}].tags is undefined or null",
+    "aws_network_acl[{{allow-public-outbound-nacl}}].tags does not have additional tags defined other than 'Name'",
+    "aws_route_table[{{private-rtb}}].tags does not have additional tags defined other than 'Name'",
+    "aws_security_group[{{allow-public-outbound-sg}}].egress description is undefined or null",
+    "aws_security_group[{{allow-public-outbound-sg}}].tags is undefined or null",
+    "aws_subnet[{{private-subnet}}].tags does not have additional tags defined other than 'Name'"
+  ]
 }

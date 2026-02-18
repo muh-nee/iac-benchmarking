@@ -4,5 +4,8 @@
   "kics": "no",
   "snyk": "no",
   "terrascan": "no",
-  "tfsec": "yes"
+  "tfsec": "yes",
+  "expected_false_positives": [
+    "'tags' block is missing"
+  ]
 }
