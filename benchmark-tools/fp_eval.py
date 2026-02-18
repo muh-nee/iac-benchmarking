@@ -502,14 +502,19 @@ def main():
     print(f"{'=' * 80}")
     
     # Print tool comparison
-    print(f"\n{'=' * 60}")
-    print("TOOL COMPARISON - DETECTION RATES")
-    print(f"{'=' * 60}")
-    print(f"{'Tool':<25} {'Detected':<10} {'Total':<10} {'Rate':<10}")
-    print(f"{'-' * 55}")
+    print(f"\n{'=' * 90}")
+    print("TOOL COMPARISON")
+    print(f"{'=' * 90}")
+    print(f"{'Tool':<35} {'Detected':<10} {'Total':<8} {'Det Rate':<10} {'Findings':<10} {'Precision':<10}")
+    print(f"{'-' * 90}")
     
-    # Our scanner first
-    print(f"{'datadog-iac-scanner':<25} {dd_scanner_detected:<10} {total_test_cases:<10} {dd_detection_rate:.1%}")
+    # Our scanner - without FP filtering
+    print(f"{'datadog-iac-scanner (no filtering)':<35} {dd_scanner_detected:<10} {total_test_cases:<8} {dd_detection_rate:<10.1%} {without_filtering_total:<10} {without_filtering_precision:<10.1%}")
+    
+    # Our scanner - with FP filtering
+    print(f"{'datadog-iac-scanner (with filtering)':<35} {dd_scanner_detected:<10} {total_test_cases:<8} {dd_detection_rate:<10.1%} {with_filtering_total:<10} {with_filtering_precision:<10.1%}")
+    
+    print(f"{'-' * 90}")
     
     # Sort other tools by detection rate
     sorted_tools = sorted(
@@ -519,9 +524,9 @@ def main():
     )
     for tool in sorted_tools:
         stats = tool_comparison_stats[tool]
-        print(f"{tool:<25} {stats['detected']:<10} {stats['total']:<10} {stats['detection_rate']:.1%}")
+        print(f"{tool:<35} {stats['detected']:<10} {stats['total']:<8} {stats['detection_rate']:<10.1%} {'-':<10} {'-':<10}")
     
-    print(f"{'=' * 60}")
+    print(f"{'=' * 90}")
 
     # Write results
     args.output.parent.mkdir(parents=True, exist_ok=True)

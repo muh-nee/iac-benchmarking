@@ -52,20 +52,27 @@ def main():
               f'precision +{imp.get("precision_improvement", 0):.1%}')
         print('')
     
-    print('### Tool Comparison - Detection Rates')
+    print('### Tool Comparison')
     print('')
-    print('| Tool | Detected | Total | Rate |')
-    print('|------|----------|-------|------|')
+    print('| Tool | Detected | Total | Det Rate | Findings | Precision |')
+    print('|------|----------|-------|----------|----------|-----------|')
     
     dd = tc.get('datadog_iac_scanner', {})
     total_cases = tc.get('total_test_cases', 0)
-    print(f'| **datadog-iac-scanner** | {dd.get("detected", 0)} | {total_cases} | {dd.get("detection_rate", 0):.1%} |')
+    wof = fc.get('without_filtering', {}) if fc else {}
+    wf = fc.get('with_filtering', {}) if fc else {}
+    
+    # datadog-iac-scanner without filtering
+    print(f'| **datadog-iac-scanner (no filtering)** | {dd.get("detected", 0)} | {total_cases} | {dd.get("detection_rate", 0):.1%} | {wof.get("total_findings", "-")} | {wof.get("precision", 0):.1%} |')
+    
+    # datadog-iac-scanner with filtering
+    print(f'| **datadog-iac-scanner (with filtering)** | {dd.get("detected", 0)} | {total_cases} | {dd.get("detection_rate", 0):.1%} | {wf.get("total_findings", "-")} | {wf.get("precision", 0):.1%} |')
     
     tools = ['checkov', 'cloudrail', 'kics', 'snyk', 'terrascan', 'tfsec']
     sorted_tools = sorted(tools, key=lambda t: tc.get(t, {}).get('detection_rate', 0), reverse=True)
     for tool in sorted_tools:
         t = tc.get(tool, {})
-        print(f'| {tool} | {t.get("detected", 0)} | {t.get("total", 0)} | {t.get("detection_rate", 0):.1%} |')
+        print(f'| {tool} | {t.get("detected", 0)} | {t.get("total", 0)} | {t.get("detection_rate", 0):.1%} | - | - |')
 
 
 if __name__ == '__main__':
