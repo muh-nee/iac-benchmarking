@@ -33,7 +33,7 @@ from pathlib import Path
 import requests
 
 
-API_URL = "https://dd.datad0g.com/api/v2/static-analysis-ai/false-positive/evaluate"
+API_URL = "https://api.datadoghq.com/api/v2/static-analysis-ai/false-positive/evaluate"
 BENCHMARK_TOOLS = ["checkov", "cloudrail", "kics", "snyk", "terrascan", "tfsec"]
 
 
@@ -227,7 +227,8 @@ def evaluate_finding(finding: Finding, api_key: str, app_key: str) -> dict:
     
     status = "✓" if is_correct else "✗"
     fp_marker = " [expected FP]" if finding.expected_fp else ""
-    print(f"  {finding.message[:60]}... in {Path(finding.test_case_path).name}: {conf} {status}{fp_marker}")
+    error_info = f" ({reason[:50]})" if conf == "ERROR" and reason else ""
+    print(f"  {finding.message[:60]}... in {Path(finding.test_case_path).name}: {conf} {status}{fp_marker}{error_info}")
     
     return {
         "rule_id": finding.rule_id,
