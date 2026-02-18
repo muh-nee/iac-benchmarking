@@ -40,17 +40,14 @@ def main():
         wf = fc.get('with_filtering', {})
         imp = fc.get('improvement', {})
         
-        print('### FP Filtering Impact')
+        print('### Datadog IAC Scanner - FP Filtering Comparison')
         print('')
-        print('| Metric | Without Filtering | With Filtering |')
-        print('|--------|-------------------|----------------|')
-        print(f'| Total Findings | {wof.get("total_findings", 0)} | {wf.get("total_findings", 0)} |')
-        print(f'| True Positives | {wof.get("true_positives", 0)} | {wf.get("true_positives", 0)} |')
-        print(f'| False Positives | {wof.get("false_positives", 0)} | {wf.get("false_positives", 0)} |')
-        print(f'| Precision | {wof.get("precision", 0):.1%} | {wf.get("precision", 0):.1%} |')
-        print(f'| Recall | 100% | {wf.get("recall", 0):.1%} |')
+        print('| Configuration | Findings | True Positives | False Positives | Precision | Recall |')
+        print('|---------------|----------|----------------|-----------------|-----------|--------|')
+        print(f'| **Without FP Filtering** | {wof.get("total_findings", 0)} | {wof.get("true_positives", 0)} | {wof.get("false_positives", 0)} | {wof.get("precision", 0):.1%} | 100% |')
+        print(f'| **With FP Filtering** | {wf.get("total_findings", 0)} | {wf.get("true_positives", 0)} | {wf.get("false_positives", 0)} | {wf.get("precision", 0):.1%} | {wf.get("recall", 0):.1%} |')
         print('')
-        print(f'**Improvement:** {imp.get("fps_filtered", 0)} FPs filtered ({imp.get("fps_filter_rate", 0):.1%}), '
+        print(f'**Impact:** {imp.get("fps_filtered", 0)} FPs filtered ({imp.get("fps_filter_rate", 0):.1%}), '
               f'findings reduced by {imp.get("findings_reduction_pct", 0):.1%}, '
               f'precision +{imp.get("precision_improvement", 0):.1%}')
         print('')

@@ -488,21 +488,18 @@ def main():
     print(f"{'=' * 60}")
     
     # Print FP filtering comparison
-    print(f"\n{'=' * 60}")
-    print("FP FILTERING COMPARISON")
-    print(f"{'=' * 60}")
-    print(f"{'Metric':<30} {'Without Filter':<15} {'With Filter':<15}")
-    print(f"{'-' * 60}")
-    print(f"{'Total Findings':<30} {without_filtering_total:<15} {with_filtering_total:<15}")
-    print(f"{'True Positives':<30} {without_filtering_tps:<15} {with_filtering_tps:<15}")
-    print(f"{'False Positives':<30} {without_filtering_fps:<15} {with_filtering_fps:<15}")
-    print(f"{'Precision':<30} {without_filtering_precision:<15.1%} {with_filtering_precision:<15.1%}")
-    print(f"{'Recall':<30} {'100%':<15} {with_filtering_recall:<15.1%}")
-    print(f"")
-    print(f"FPs Filtered Out: {fps_filtered} ({fps_filter_rate:.1%} of expected FPs)")
-    print(f"Findings Reduced: {without_filtering_total - with_filtering_total} ({1 - (with_filtering_total / without_filtering_total) if without_filtering_total > 0 else 0:.1%})")
-    print(f"Precision Improvement: +{with_filtering_precision - without_filtering_precision:.1%}")
-    print(f"{'=' * 60}")
+    print(f"\n{'=' * 80}")
+    print("DATADOG IAC SCANNER - FP FILTERING COMPARISON")
+    print(f"{'=' * 80}")
+    print(f"{'Configuration':<25} {'Findings':<10} {'TPs':<8} {'FPs':<8} {'Precision':<12} {'Recall':<10}")
+    print(f"{'-' * 80}")
+    print(f"{'Without FP Filtering':<25} {without_filtering_total:<10} {without_filtering_tps:<8} {without_filtering_fps:<8} {without_filtering_precision:<12.1%} {'100%':<10}")
+    print(f"{'With FP Filtering':<25} {with_filtering_total:<10} {with_filtering_tps:<8} {with_filtering_fps:<8} {with_filtering_precision:<12.1%} {with_filtering_recall:<10.1%}")
+    print(f"{'-' * 80}")
+    print(f"Impact: {fps_filtered} FPs filtered ({fps_filter_rate:.1%}), "
+          f"findings reduced by {1 - (with_filtering_total / without_filtering_total) if without_filtering_total > 0 else 0:.1%}, "
+          f"precision +{with_filtering_precision - without_filtering_precision:.1%}")
+    print(f"{'=' * 80}")
     
     # Print tool comparison
     print(f"\n{'=' * 60}")

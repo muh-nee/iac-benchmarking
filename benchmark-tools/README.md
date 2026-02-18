@@ -22,6 +22,37 @@ Each test case represents a **known security issue**. Findings are categorized a
 | True Positive | HIGH | API returns HIGH |
 | Expected FP | LOW | API returns LOW |
 
+### False Positive Assignment Logic
+
+Each test case directory contains a `results_summary.json` file that defines which findings should be treated as **expected false positives**. These are findings that are technically valid but incidental to the security issue being tested.
+
+**Expected false positives include:**
+- **Missing tags**: `"'tags' block is missing"`, `"tags is undefined or null"`, `"Missing tags: {\"team\"}"`
+- **Shield/WAF associations**: `"does not have shield advanced associated"`
+- **Informational findings**: Findings about optional best practices unrelated to the test case's core security issue
+
+**NOT expected false positives (real issues):**
+- `publicly_accessible` settings
+- `public_network_access_enabled` settings  
+- Wildcard IAM permissions (`"*"` in actions or resources)
+- The primary security issue the test case was designed to catch
+
+**Example `results_summary.json`:**
+```json
+{
+  "checkov": "yes",
+  "kics": "yes",
+  "snyk": "no",
+  "expected_false_positives": [
+    "Ensure that Azure cloud resource has a team tag",
+    "'tags' block is missing",
+    "does not have shield advanced associated"
+  ]
+}
+```
+
+When the benchmark runs, it matches each finding's message against these patterns. If a match is found, the finding is marked as `expected_fp=True`, and the evaluation expects the API to return LOW confidence (indicating the model correctly identified it as a false positive).
+
 ## Prerequisites
 
 - Python 3.10+
@@ -166,21 +197,16 @@ EXPECTED FALSE POSITIVES (expect LOW):
 OVERALL ACCURACY: 90.8%
 ============================================================
 
-============================================================
-FP FILTERING COMPARISON
-============================================================
-Metric                         Without Filter   With Filter    
-------------------------------------------------------------
-Total Findings                 450              320            
-True Positives                 320              295            
-False Positives                130              25             
-Precision                      71.1%            92.2%          
-Recall                         100%             92.2%          
-
-FPs Filtered Out: 105 (80.8% of expected FPs)
-Findings Reduced: 130 (28.9%)
-Precision Improvement: +21.1%
-============================================================
+================================================================================
+DATADOG IAC SCANNER - FP FILTERING COMPARISON
+================================================================================
+Configuration             Findings   TPs     FPs     Precision    Recall    
+--------------------------------------------------------------------------------
+Without FP Filtering      450        320     130     71.1%        100%      
+With FP Filtering         320        295     25      92.2%        92.2%     
+--------------------------------------------------------------------------------
+Impact: 105 FPs filtered (80.8%), findings reduced by 28.9%, precision +21.1%
+================================================================================
 
 ============================================================
 TOOL COMPARISON - DETECTION RATES
