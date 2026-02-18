@@ -255,6 +255,10 @@ This reads `fp_eval_results.json` and updates `results_summary.json` files for f
 | `fp_eval.py` | Main evaluation script |
 | `run_scanner.sh` | Helper to run scanner on all test cases |
 | `update_expected_fps.py` | Bulk update expected FPs from results |
+| `generate_summary.py` | Generate GitHub Actions summary |
+| `check_threshold.py` | Check accuracy meets threshold |
+| `submit_metrics.py` | Submit metrics to Datadog |
+| `requirements.txt` | Python dependencies |
 | `../results/fp_eval_results.json` | Evaluation results output |
 | `../test-cases/terraform/` | Test case directories |
 
